@@ -93,3 +93,24 @@ export const getTaskById = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+export const updateTask = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    const  id  = req.params.id;
+    const { title, description, priority, status, due_date } = req.body;
+
+    await pool.execute(
+      `UPDATE tasks SET title=?,description=?,priority=?,status=?,due_date=? WHERE id=? AND user_id=?`,
+       [title, description, priority, status, due_date, id, userId],
+    );
+
+    res.json({message: "Task updated successfully",
+});
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
