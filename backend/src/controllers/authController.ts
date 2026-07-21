@@ -7,7 +7,7 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if(!email || !password) { return res.status(401).json({
-      message: "All feild are required",
+      message: "Email and password are required",
     })}
 
     const [rows]: any = await pool.execute(
