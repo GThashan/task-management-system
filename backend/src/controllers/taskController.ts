@@ -2,6 +2,20 @@ import { Response } from "express";
 import pool from "../config/database";
 import { AuthRequest } from "../middleware/authMiddleware";
 
+import { RowDataPacket } from "mysql2";
+
+interface Task extends RowDataPacket {
+  id: number;
+  user_id: number;
+  title: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  due_date: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
 //task create
 export const createTask = async (req: AuthRequest, res: Response) => {
   try {
@@ -37,4 +51,45 @@ export const createTask = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getTaskById = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const id = req.params.id;
 
+    if (!userId) {
+      return res.status(401).json({
+        message: "User not authenticated",
+      });
+    }
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Task id is required",
+      });
+    }
+
+    const [rows] = await pool.execute(
+      `
+      SELECT * FROM tasks
+      WHERE id = ? AND user_id = ?
+      `,
+      [id, userId],
+    );
+
+    const tasks = rows as Task[];
+
+    if (tasks.length === 0) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
+
+    return res.status(200).json(tasks[0]);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
