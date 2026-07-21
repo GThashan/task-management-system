@@ -144,3 +144,50 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+export const getAllTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    console.log("hello")
+    const { search, status, priority, sort } = req.query;
+
+    let query = `SELECT * FROM tasks WHERE user_id=?`;
+
+    let params: any[] = [userId];
+
+    if (search) {
+      query += ` AND title LIKE ?`;
+      params.push(`%${search}%`);
+    }
+
+    if (status) {
+      query += ` AND status=?`;
+      params.push(status);
+    }
+
+
+    if (priority) {
+      query += ` AND priority=?`;
+      params.push(priority);
+    }
+
+
+    if (sort === "oldest") {
+      query += ` ORDER BY created_at ASC`;
+    } else if (sort === "due_date") {
+      query += ` ORDER BY due_date ASC`;
+    } else {
+      query += ` ORDER BY created_at DESC`;
+    }
+
+    const [rows] = await pool.execute(query, params);
+
+    res.json(rows);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
