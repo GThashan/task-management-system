@@ -45,7 +45,7 @@ const Login = () => {
               <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <Clock size={22} />
               </div>
-              <span className="text-xl font-bold tracking-tight">TimeSwift</span>
+              <span className="text-xl font-bold tracking-tight">TaskFlow</span>
             </div>
 
             <div>
@@ -79,7 +79,7 @@ const Login = () => {
             <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center text-white">
               <Clock size={20} />
             </div>
-            <span className="text-lg font-bold text-gray-900">TimeSwift</span>
+            <span className="text-lg font-bold text-gray-900">TaskFlow</span>
           </div>
 
           <div className="mb-8">

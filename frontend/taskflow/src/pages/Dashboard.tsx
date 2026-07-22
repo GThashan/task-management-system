@@ -6,7 +6,6 @@ import TaskModal, { type TaskModalMode } from "../components/TaskModal";
 import {
   List,
   LayoutGrid,
-  Download,
   ChevronDown,
   Filter,
   Calendar,
@@ -141,13 +140,7 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Download size={16} />
-                <span className="hidden sm:inline">Export</span>
-              </button>
+              
 
               <button
                 type="button"

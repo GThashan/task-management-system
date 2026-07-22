@@ -1,16 +1,9 @@
 import {
   LayoutDashboard,
   CheckSquare,
-  AlertCircle,
   Clock,
-  Flag,
-  BarChart3,
-  FileText,
-  Wallet,
-  User,
   ChevronDown,
   X,
-  Settings,
 } from "lucide-react";
 
 interface NavItem {
@@ -28,19 +21,10 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps) => {
   const mainNav: NavItem[] = [
     { icon: <LayoutDashboard size={18} />, label: "Dashboard" },
     { icon: <CheckSquare size={18} />, label: "Tasks", active: true },
-    { icon: <AlertCircle size={18} />, label: "Issues" },
-    { icon: <Clock size={18} />, label: "Timesheet" },
-    { icon: <Flag size={18} />, label: "Milestones" },
-    { icon: <BarChart3 size={18} />, label: "Reports" },
+  
   ];
 
-  const manageNav: NavItem[] = [
-    { icon: <FileText size={18} />, label: "Documents" },
-    { icon: <Wallet size={18} />, label: "Finance" },
-    { icon: <User size={18} />, label: "User" },
-    { icon: <Settings size={18} />, label: "Settings" },
-  ];
-
+ 
   const sidebarContent = (
     <>
       <div className="flex items-center justify-between p-5 border-b border-gray-100">
@@ -48,7 +32,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps) => {
           <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center text-white shadow-sm">
             <Clock size={20} />
           </div>
-          <span className="text-lg font-bold text-gray-900">TimeSwift</span>
+          <span className="text-lg font-bold text-gray-900">TaskFlow</span>
         </div>
         <button
           type="button"
@@ -66,7 +50,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps) => {
           className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition-colors text-left"
         >
           <span className="text-sm font-medium text-gray-700 truncate">
-            Intercom Marketing Team
+            TaskFlow Team
           </span>
           <ChevronDown size={16} className="text-gray-400 shrink-0 ml-2" />
         </button>
@@ -93,22 +77,8 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps) => {
           ))}
         </ul>
 
-        <p className="px-3 pt-6 pb-2 text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
-          Manage
-        </p>
-        <ul className="space-y-0.5">
-          {manageNav.map((item) => (
-            <li key={item.label}>
-              <a
-                href="#"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-              >
-                <span className="text-gray-400">{item.icon}</span>
-                {item.label}
-              </a>
-            </li>
-          ))}
-        </ul>
+      
+        
       </nav>
     </>
   );

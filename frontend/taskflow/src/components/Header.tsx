@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Clock, Bell, ChevronDown, Menu, LogOut } from "lucide-react";
+import { Search, Bell, ChevronDown, Menu, LogOut } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 
 interface HeaderProps {
@@ -42,7 +42,7 @@ const Header = ({ onMenuClick, searchValue = "", onSearchChange }: HeaderProps) 
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
-      <div className="flex items-center gap-3 px-4 py-3 md:px-6 md:py-4">
+      <div className="flex items-center gap-3 px-4 py-3 md:px-6 md:py-4 lg:justify-between">
         <button
           type="button"
           onClick={onMenuClick}
@@ -72,13 +72,7 @@ const Header = ({ onMenuClick, searchValue = "", onSearchChange }: HeaderProps) 
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0">
-          <button
-            type="button"
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            aria-label="Time tracker"
-          >
-            <Clock size={20} />
-          </button>
+          
 
           <button
             type="button"
