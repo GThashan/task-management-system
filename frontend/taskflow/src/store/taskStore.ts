@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
-import Swal from "sweetalert2";
 import { tasksApi, ApiError } from "../services/api";
 import { useAuthStore } from "./authStore";
+import { confirmDeleteTask, showLoading, closeAlert } from "../utils/alerts";
 import type { Task, TaskFormData, TaskFilters } from "../types/task";
 
 interface TaskState {
@@ -55,7 +55,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   createTask: async (data) => {
     const token = getToken();
-    if (!token) return false;
+    if (!token) {
+      toast.error("You must be logged in to create tasks");
+      return false;
+    }
 
     try {
       await tasksApi.create(token, data);
@@ -70,7 +73,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   updateTask: async (id, data) => {
     const token = getToken();
-    if (!token) return false;
+    if (!token) {
+      toast.error("You must be logged in to update tasks");
+      return false;
+    }
 
     try {
       await tasksApi.update(token, id, data);
@@ -85,7 +91,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   deleteTask: async (id) => {
     const token = getToken();
-    if (!token) return false;
+    if (!token) {
+      toast.error("You must be logged in to delete tasks");
+      return false;
+    }
 
     try {
       await tasksApi.delete(token, id);
@@ -99,21 +108,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   confirmDeleteTask: async (id, title) => {
-    const result = await Swal.fire({
-      title: "Delete task?",
-      html: `Are you sure you want to delete <strong>${title}</strong>? This cannot be undone.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#9333ea",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Yes, delete it",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-    });
+    const confirmed = await confirmDeleteTask(title);
+    if (!confirmed) return;
 
-    if (result.isConfirmed) {
-      await get().deleteTask(id);
-    }
+    showLoading("Deleting task...");
+    await get().deleteTask(id);
+    closeAlert();
   },
 
   setSelectedTask: (task) => set({ selectedTask: task }),

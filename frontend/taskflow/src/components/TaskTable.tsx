@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment, useRef, useEffect } from "react";
+import { useState, useMemo, Fragment } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,15 +7,7 @@ import {
   createColumnHelper,
   type Row,
 } from "@tanstack/react-table";
-import {
-  MoreVertical,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Pencil,
-  Trash2,
-  Loader2,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
 import type { Task, TaskPriority, TaskStatus } from "../types/task";
 import { formatTaskDate } from "../types/task";
 import { useTaskStore } from "../store/taskStore";
@@ -43,77 +35,6 @@ const priorityDot: Record<TaskPriority, string> = {
   High: "bg-red-500",
   Medium: "bg-amber-500",
   Low: "bg-blue-500",
-};
-
-const TaskActions = ({
-  task,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  task: Task;
-  onView: (task: Task) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
-}) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label="Row actions"
-      >
-        <MoreVertical size={16} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-20 animate-slideDown">
-          <button
-            type="button"
-            onClick={() => {
-              onView(task);
-              setOpen(false);
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            <Eye size={14} /> View
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onEdit(task);
-              setOpen(false);
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            <Pencil size={14} /> Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onDelete(task);
-              setOpen(false);
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-          >
-            <Trash2 size={14} /> Delete
-          </button>
-        </div>
-      )}
-    </div>
-  );
 };
 
 const columnHelper = createColumnHelper<Task>();
@@ -202,15 +123,48 @@ const TaskTable = ({ tasks, isLoading, onView, onEdit }: TaskTableProps) => {
         ),
       }),
       columnHelper.display({
-        id: "actions",
-        header: "",
+        id: "view",
+        header: "View",
         cell: ({ row }) => (
-          <TaskActions
-            task={row.original}
-            onView={onView}
-            onEdit={onEdit}
-            onDelete={(t) => confirmDeleteTask(t.id, t.title)}
-          />
+          <button
+            type="button"
+            onClick={() => onView(row.original)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            title="View task"
+          >
+            <Eye size={14} />
+            View
+          </button>
+        ),
+      }),
+      columnHelper.display({
+        id: "edit",
+        header: "Update",
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => onEdit(row.original)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-100 rounded-lg hover:bg-purple-100 transition-colors"
+            title="Edit task"
+          >
+            <Pencil size={14} />
+            Edit
+          </button>
+        ),
+      }),
+      columnHelper.display({
+        id: "delete",
+        header: "Delete",
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => confirmDeleteTask(row.original.id, row.original.title)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors"
+            title="Delete task"
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
         ),
       }),
     ],
@@ -265,14 +219,14 @@ const TaskTable = ({ tasks, isLoading, onView, onEdit }: TaskTableProps) => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[1000px]">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-gray-100 bg-gray-50/50">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
                   >
                     {header.isPlaceholder
                       ? null
@@ -311,7 +265,7 @@ const TaskTable = ({ tasks, isLoading, onView, onEdit }: TaskTableProps) => {
                         className="border-b border-gray-50 hover:bg-purple-50/30 transition-colors"
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-4 py-3.5">
+                          <td key={cell.id} className="px-4 py-3.5 whitespace-nowrap">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         ))}

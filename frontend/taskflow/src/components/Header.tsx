@@ -5,9 +5,11 @@ import { useAuthStore } from "../store/authStore";
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
-const Header = ({ onMenuClick }: HeaderProps) => {
+const Header = ({ onMenuClick, searchValue = "", onSearchChange }: HeaderProps) => {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -58,6 +60,8 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             />
             <input
               type="search"
+              value={searchValue}
+              onChange={(e) => onSearchChange?.(e.target.value)}
               placeholder="Search tasks, projects..."
               className="w-full pl-10 pr-16 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-all"
             />

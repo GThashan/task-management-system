@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import TaskTable from "../components/TaskTable";
@@ -14,6 +14,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { useTaskStore } from "../store/taskStore";
 import type { Task, TaskStatus } from "../types/task";
@@ -25,16 +26,24 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<TaskModalMode>("create");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
-  const { tasks, isLoading, fetchTasks, createTask, updateTask, confirmDeleteTask } =
+  const { tasks, isLoading, fetchTasks, fetchTaskById, createTask, updateTask, confirmDeleteTask } =
     useTaskStore();
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchTasks(debouncedSearch ? { search: debouncedSearch } : undefined);
+  }, [fetchTasks, debouncedSearch]);
 
   const filteredTasks = useMemo(() => {
     if (activeFilters.length === 0) return tasks;
@@ -51,15 +60,28 @@ const Dashboard = () => {
     setActiveFilters((prev) => prev.filter((f) => f !== filter));
   };
 
-  const openModal = (mode: TaskModalMode, task: Task | null = null) => {
-    setModalMode(mode);
-    setSelectedTask(task);
-    setModalOpen(true);
-  };
+  const openModal = useCallback(
+    async (mode: TaskModalMode, task: Task | null = null) => {
+      setModalMode(mode);
+      setModalOpen(true);
+
+      if (mode === "view" && task) {
+        setViewLoading(true);
+        setSelectedTask(task);
+        const fresh = await fetchTaskById(task.id);
+        setSelectedTask(fresh ?? task);
+        setViewLoading(false);
+      } else {
+        setSelectedTask(task);
+      }
+    },
+    [fetchTaskById]
+  );
 
   const closeModal = () => {
     setModalOpen(false);
     setSelectedTask(null);
+    setViewLoading(false);
   };
 
   const handleModalSubmit = async (data: Parameters<typeof createTask>[0]) => {
@@ -79,7 +101,11 @@ const Dashboard = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          onMenuClick={() => setSidebarOpen(true)}
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -193,7 +219,9 @@ const Dashboard = () => {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                onClick={() => fetchTasks()}
+                onClick={() =>
+                  fetchTasks(debouncedSearch ? { search: debouncedSearch } : undefined)
+                }
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <Filter size={16} />
@@ -220,7 +248,10 @@ const Dashboard = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {isLoading ? (
-                <p className="col-span-full text-center text-gray-500 py-12">Loading tasks...</p>
+                <div className="col-span-full flex flex-col items-center justify-center gap-3 py-12">
+                  <Loader2 size={32} className="animate-spin text-purple-600" />
+                  <p className="text-sm text-gray-500">Loading tasks...</p>
+                </div>
               ) : filteredTasks.length === 0 ? (
                 <p className="col-span-full text-center text-gray-500 py-12">No tasks found.</p>
               ) : (
@@ -284,6 +315,7 @@ const Dashboard = () => {
         isOpen={modalOpen}
         mode={modalMode}
         task={selectedTask}
+        isLoading={viewLoading}
         onClose={closeModal}
         onSubmit={handleModalSubmit}
       />

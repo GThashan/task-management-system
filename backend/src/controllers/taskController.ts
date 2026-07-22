@@ -19,15 +19,22 @@ interface Task extends RowDataPacket {
 //task create
 export const createTask = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, priority, status, due_date } = req.body;
-    console.log(title,description,priority,status,due_date)
+    const body = req.body ?? {};
+    const { title, description, priority, status, due_date } = body;
+
     if (!title || !priority || !status || !due_date) {
-      return res.status(401).json({
+      return res.status(400).json({
         message: "Title, priority, status and due date are required",
       });
     }
 
     const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "User not authenticated",
+      });
+    }
 
     const [result]: any = await pool.execute(
       `
@@ -97,17 +104,36 @@ export const getTaskById = async (req: AuthRequest, res: Response) => {
 export const updateTask = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-
     const id = req.params.id;
-    const { title, description, priority, status, due_date } = req.body;
+    const body = req.body ?? {};
+    const { title, description, priority, status, due_date } = body;
 
-    await pool.execute(
+    if (!userId) {
+      return res.status(401).json({
+        message: "User not authenticated",
+      });
+    }
+
+    if (!title || !priority || !status || !due_date) {
+      return res.status(400).json({
+        message: "Title, priority, status and due date are required",
+      });
+    }
+
+    const [result]: any = await pool.execute(
       `UPDATE tasks SET title=?,description=?,priority=?,status=?,due_date=? WHERE id=? AND user_id=?`,
-      [title, description, priority, status, due_date, id, userId],
+      [title, description ?? null, priority, status, due_date, id, userId],
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
 
     res.json({ message: "Task updated successfully" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({
       message: "Server error",
     });
@@ -148,7 +174,6 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
 export const getAllTasks = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-    console.log("hello")
     const { search, status, priority, sort } = req.query;
 
     let query = `SELECT * FROM tasks WHERE user_id=?`;

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import toast from "react-hot-toast";
 import { authApi, ApiError } from "../services/api";
 
 export interface User {
@@ -42,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
 
+          toast.success(`Welcome back, ${data.user.name}!`);
           return true;
         } catch (err) {
           const message =
@@ -59,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           error: null,
         });
+        toast.success("Logged out successfully");
       },
 
       clearError: () => set({ error: null }),
