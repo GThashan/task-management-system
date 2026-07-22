@@ -20,7 +20,7 @@ interface Task extends RowDataPacket {
 export const createTask = async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, priority, status, due_date } = req.body;
-
+    console.log(title,description,priority,status,due_date)
     if (!title || !priority || !status || !due_date) {
       return res.status(401).json({
         message: "Title, priority, status and due date are required",

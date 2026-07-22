@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import TaskTable from "../components/TaskTable";
+import TaskModal, { type TaskModalMode } from "../components/TaskModal";
 import {
   List,
   LayoutGrid,
@@ -10,15 +11,67 @@ import {
   Filter,
   Calendar,
   X,
+  Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { useTaskStore } from "../store/taskStore";
+import type { Task, TaskStatus } from "../types/task";
+import { formatTaskDate } from "../types/task";
+
+const STATUS_FILTERS: TaskStatus[] = ["Pending", "In Progress", "Completed"];
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [activeFilters, setActiveFilters] = useState(["Approved", "Pending"]);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<TaskModalMode>("create");
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  const { tasks, isLoading, fetchTasks, createTask, updateTask, confirmDeleteTask } =
+    useTaskStore();
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  const filteredTasks = useMemo(() => {
+    if (activeFilters.length === 0) return tasks;
+    return tasks.filter((t) => activeFilters.includes(t.status));
+  }, [tasks, activeFilters]);
+
+  const toggleFilter = (status: string) => {
+    setActiveFilters((prev) =>
+      prev.includes(status) ? prev.filter((f) => f !== status) : [...prev, status]
+    );
+  };
 
   const removeFilter = (filter: string) => {
     setActiveFilters((prev) => prev.filter((f) => f !== filter));
+  };
+
+  const openModal = (mode: TaskModalMode, task: Task | null = null) => {
+    setModalMode(mode);
+    setSelectedTask(task);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleModalSubmit = async (data: Parameters<typeof createTask>[0]) => {
+    if (modalMode === "create") return createTask(data);
+    if (modalMode === "edit" && selectedTask) return updateTask(selectedTask.id, data);
+    return false;
+  };
+
+  const statusColor = (status: string) => {
+    if (status === "Completed") return "bg-emerald-50 text-emerald-700";
+    if (status === "Pending") return "bg-orange-50 text-orange-700";
+    return "bg-sky-50 text-sky-700";
   };
 
   return (
@@ -46,7 +99,7 @@ const Dashboard = () => {
                   }`}
                 >
                   <List size={16} />
-                  <span className="hidden xs:inline sm:inline">List</span>
+                  <span className="hidden sm:inline">List</span>
                 </button>
                 <button
                   type="button"
@@ -58,7 +111,7 @@ const Dashboard = () => {
                   }`}
                 >
                   <LayoutGrid size={16} />
-                  <span className="hidden xs:inline sm:inline">Grid</span>
+                  <span className="hidden sm:inline">Grid</span>
                 </button>
               </div>
 
@@ -72,6 +125,7 @@ const Dashboard = () => {
 
               <button
                 type="button"
+                onClick={() => openModal("create")}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 shadow-sm shadow-purple-200 transition-colors"
               >
                 + Add Task
@@ -82,13 +136,31 @@ const Dashboard = () => {
 
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <button
-                type="button"
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Group By Date
-                <ChevronDown size={14} className="text-gray-400" />
-              </button>
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Filter by Status
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+                <div className="hidden group-hover:block absolute top-full left-0 mt-1 w-44 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-10">
+                  {STATUS_FILTERS.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => toggleFilter(status)}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                        activeFilters.includes(status)
+                          ? "text-purple-600 font-medium"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {activeFilters.map((filter) => (
                 <span
@@ -121,10 +193,11 @@ const Dashboard = () => {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
+                onClick={() => fetchTasks()}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <Filter size={16} />
-                Filters
+                Refresh
               </button>
 
               <button
@@ -132,49 +205,88 @@ const Dashboard = () => {
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
               >
                 <Calendar size={16} className="text-gray-400" />
-                10 Mar – 21 Mar, 2026
+                {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
               </button>
             </div>
           </div>
 
           {viewMode === "list" ? (
-            <TaskTable />
+            <TaskTable
+              tasks={filteredTasks}
+              isLoading={isLoading}
+              onView={(task) => openModal("view", task)}
+              onEdit={(task) => openModal("edit", task)}
+            />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {[
-                { title: "Build Login Page", status: "Approved", priority: "High" },
-                { title: "API Integration", status: "Pending", priority: "Medium" },
-                { title: "Dashboard Design", status: "In Progress", priority: "Low" },
-              ].map((task) => (
-                <div
-                  key={task.title}
-                  className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-purple-200 transition-all"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="text-xs font-medium text-gray-400">DC-T535</span>
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-md ${
-                        task.status === "Approved"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : task.status === "Pending"
-                            ? "bg-orange-50 text-orange-700"
-                            : "bg-sky-50 text-sky-700"
-                      }`}
-                    >
-                      {task.status}
-                    </span>
+              {isLoading ? (
+                <p className="col-span-full text-center text-gray-500 py-12">Loading tasks...</p>
+              ) : filteredTasks.length === 0 ? (
+                <p className="col-span-full text-center text-gray-500 py-12">No tasks found.</p>
+              ) : (
+                filteredTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-purple-200 transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <span className="text-xs font-medium text-gray-400">TF-{task.id}</span>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-md ${statusColor(task.status)}`}
+                      >
+                        {task.status}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{task.title}</h3>
+                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">
+                      {task.description || "No description"}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                      <span>
+                        Priority:{" "}
+                        <span className="font-medium text-gray-700">{task.priority}</span>
+                      </span>
+                      <span>Due: {formatTaskDate(task.due_date)}</span>
+                    </div>
+                    <div className="flex gap-2 pt-3 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => openModal("view", task)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100"
+                      >
+                        <Eye size={14} /> View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openModal("edit", task)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100"
+                      >
+                        <Pencil size={14} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => confirmDeleteTask(task.id, task.title)}
+                        className="flex items-center justify-center p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100"
+                        aria-label="Delete task"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">{task.title}</h3>
-                  <p className="text-xs text-gray-500">
-                    Priority:{" "}
-                    <span className="font-medium text-gray-700">{task.priority}</span>
-                  </p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </main>
       </div>
+
+      <TaskModal
+        isOpen={modalOpen}
+        mode={modalMode}
+        task={selectedTask}
+        onClose={closeModal}
+        onSubmit={handleModalSubmit}
+      />
     </div>
   );
 };

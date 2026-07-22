@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, useMemo, Fragment, useRef, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,167 +7,215 @@ import {
   createColumnHelper,
   type Row,
 } from "@tanstack/react-table";
-import { MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Pencil,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import type { Task, TaskPriority, TaskStatus } from "../types/task";
+import { formatTaskDate } from "../types/task";
+import { useTaskStore } from "../store/taskStore";
 
-type Task = {
-  id: string;
-  title: string;
-  assignee: string;
-  priority: "High" | "Medium" | "Low";
-  status: "Pending" | "In Progress" | "Completed" | "Approved";
-  dueDate: string;
-  groupDate: string;
-};
+interface TaskTableProps {
+  tasks: Task[];
+  isLoading: boolean;
+  onView: (task: Task) => void;
+  onEdit: (task: Task) => void;
+}
 
-const tasks: Task[] = [
-  {
-    id: "DC-T535",
-    title: "Build Login Page",
-    assignee: "Dibbendo",
-    priority: "High",
-    status: "Approved",
-    dueDate: "2026-07-25",
-    groupDate: "12/10/2023",
-  },
-  {
-    id: "DC-T536",
-    title: "API Integration",
-    assignee: "Sarah Chen",
-    priority: "Medium",
-    status: "Pending",
-    dueDate: "2026-07-30",
-    groupDate: "12/10/2023",
-  },
-  {
-    id: "DC-T537",
-    title: "Dashboard Design",
-    assignee: "Mike Ross",
-    priority: "Low",
-    status: "In Progress",
-    dueDate: "2026-08-01",
-    groupDate: "12/10/2023",
-  },
-  {
-    id: "DC-T540",
-    title: "User Authentication Flow",
-    assignee: "Dibbendo",
-    priority: "High",
-    status: "Completed",
-    dueDate: "2026-07-20",
-    groupDate: "11/10/2023",
-  },
-  {
-    id: "DC-T541",
-    title: "Email Notification System",
-    assignee: "Sarah Chen",
-    priority: "Medium",
-    status: "Pending",
-    dueDate: "2026-08-05",
-    groupDate: "11/10/2023",
-  },
-];
-
-const priorityStyles: Record<Task["priority"], string> = {
+const priorityStyles: Record<TaskPriority, string> = {
   High: "bg-red-50 text-red-700 ring-red-100",
   Medium: "bg-amber-50 text-amber-700 ring-amber-100",
   Low: "bg-blue-50 text-blue-700 ring-blue-100",
 };
 
-const statusStyles: Record<Task["status"], string> = {
-  Approved: "bg-emerald-50 text-emerald-700",
+const statusStyles: Record<TaskStatus, string> = {
   Pending: "bg-orange-50 text-orange-700",
   "In Progress": "bg-sky-50 text-sky-700",
   Completed: "bg-emerald-50 text-emerald-700",
 };
 
-const priorityDot: Record<Task["priority"], string> = {
+const priorityDot: Record<TaskPriority, string> = {
   High: "bg-red-500",
   Medium: "bg-amber-500",
   Low: "bg-blue-500",
 };
 
-const columnHelper = createColumnHelper<Task>();
+const TaskActions = ({
+  task,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  task: Task;
+  onView: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-const columns = [
-  columnHelper.display({
-    id: "select",
-    header: () => (
-      <input
-        type="checkbox"
-        className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-        aria-label="Select all"
-      />
-    ),
-    cell: () => (
-      <input
-        type="checkbox"
-        className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-        aria-label="Select row"
-      />
-    ),
-  }),
-  columnHelper.accessor("title", {
-    header: "Task / Issues",
-    cell: (info) => {
-      const row = info.row.original;
-      return (
-        <div className="flex items-center gap-2.5 min-w-[180px]">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${priorityDot[row.priority]}`} />
-          <span className="text-xs font-medium text-gray-400 shrink-0">{row.id}</span>
-          <span className="text-sm font-medium text-gray-900 truncate">{info.getValue()}</span>
-        </div>
-      );
-    },
-  }),
-  columnHelper.accessor("assignee", {
-    header: "User",
-    cell: (info) => (
-      <span className="text-sm text-gray-700 whitespace-nowrap">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor("priority", {
-    header: "Priority",
-    cell: (info) => (
-      <span
-        className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ring-1 ring-inset ${priorityStyles[info.getValue()]}`}
-      >
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  columnHelper.accessor("status", {
-    header: "Status",
-    cell: (info) => (
-      <span
-        className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ${statusStyles[info.getValue()]}`}
-      >
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  columnHelper.accessor("dueDate", {
-    header: "Due Date",
-    cell: (info) => (
-      <span className="text-sm text-gray-600 whitespace-nowrap">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.display({
-    id: "actions",
-    header: "",
-    cell: () => (
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
       <button
         type="button"
+        onClick={() => setOpen(!open)}
         className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
         aria-label="Row actions"
       >
         <MoreVertical size={16} />
       </button>
-    ),
-  }),
-];
 
-const TaskTable = () => {
+      {open && (
+        <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-20 animate-slideDown">
+          <button
+            type="button"
+            onClick={() => {
+              onView(task);
+              setOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <Eye size={14} /> View
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onEdit(task);
+              setOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <Pencil size={14} /> Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onDelete(task);
+              setOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const columnHelper = createColumnHelper<Task>();
+
+const TaskTable = ({ tasks, isLoading, onView, onEdit }: TaskTableProps) => {
+  const confirmDeleteTask = useTaskStore((s) => s.confirmDeleteTask);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "select",
+        header: () => (
+          <input
+            type="checkbox"
+            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+            aria-label="Select all"
+          />
+        ),
+        cell: () => (
+          <input
+            type="checkbox"
+            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+            aria-label="Select row"
+          />
+        ),
+      }),
+      columnHelper.accessor("title", {
+        header: "Task / Issues",
+        cell: (info) => {
+          const row = info.row.original;
+          const priority = row.priority as TaskPriority;
+          return (
+            <div className="flex items-center gap-2.5 min-w-[180px]">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${priorityDot[priority]}`} />
+              <span className="text-xs font-medium text-gray-400 shrink-0">
+                TF-{row.id}
+              </span>
+              <span className="text-sm font-medium text-gray-900 truncate">
+                {info.getValue()}
+              </span>
+            </div>
+          );
+        },
+      }),
+      columnHelper.accessor("description", {
+        header: "Description",
+        cell: (info) => (
+          <span className="text-sm text-gray-600 truncate max-w-[200px] block">
+            {info.getValue() || "—"}
+          </span>
+        ),
+      }),
+      columnHelper.accessor("priority", {
+        header: "Priority",
+        cell: (info) => {
+          const priority = info.getValue() as TaskPriority;
+          return (
+            <span
+              className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ring-1 ring-inset ${priorityStyles[priority]}`}
+            >
+              {priority}
+            </span>
+          );
+        },
+      }),
+      columnHelper.accessor("status", {
+        header: "Status",
+        cell: (info) => {
+          const status = info.getValue() as TaskStatus;
+          return (
+            <span
+              className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ${statusStyles[status]}`}
+            >
+              {status}
+            </span>
+          );
+        },
+      }),
+      columnHelper.accessor("due_date", {
+        header: "Due Date",
+        cell: (info) => (
+          <span className="text-sm text-gray-600 whitespace-nowrap">
+            {formatTaskDate(info.getValue())}
+          </span>
+        ),
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <TaskActions
+            task={row.original}
+            onView={onView}
+            onEdit={onEdit}
+            onDelete={(t) => confirmDeleteTask(t.id, t.title)}
+          />
+        ),
+      }),
+    ],
+    [onView, onEdit, confirmDeleteTask]
+  );
 
   const table = useReactTable({
     data: tasks,
@@ -179,7 +227,7 @@ const TaskTable = () => {
 
   const groupedRows = table.getRowModel().rows.reduce<Record<string, Row<Task>[]>>(
     (acc, row) => {
-      const date = row.original.groupDate;
+      const date = formatTaskDate(row.original.due_date);
       if (!acc[date]) acc[date] = [];
       acc[date].push(row);
       return acc;
@@ -196,10 +244,28 @@ const TaskTable = () => {
 
   const isGroupExpanded = (date: string) => expandedGroups[date] !== false;
 
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 flex flex-col items-center justify-center gap-3">
+        <Loader2 size={32} className="animate-spin text-purple-600" />
+        <p className="text-sm text-gray-500">Loading tasks...</p>
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
+        <p className="text-gray-900 font-medium mb-1">No tasks yet</p>
+        <p className="text-sm text-gray-500">Create your first task to get started.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px]">
+        <table className="w-full min-w-[800px]">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-gray-100 bg-gray-50/50">
@@ -221,14 +287,9 @@ const TaskTable = () => {
               const expanded = isGroupExpanded(date);
               return (
                 <Fragment key={date}>
-                  <tr key={`group-${date}`} className="bg-gray-50/80 border-b border-gray-100">
+                  <tr className="bg-gray-50/80 border-b border-gray-100">
                     <td colSpan={columns.length} className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-3">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                          aria-label={`Select group ${date}`}
-                        />
                         <button
                           type="button"
                           onClick={() => toggleGroup(date)}
@@ -239,15 +300,6 @@ const TaskTable = () => {
                         </button>
                         <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
                           {rows.length} items
-                        </span>
-                        <button
-                          type="button"
-                          className="text-xs text-red-500 hover:text-red-600 font-medium ml-auto sm:ml-0"
-                        >
-                          Delete
-                        </button>
-                        <span className="hidden sm:inline text-xs text-gray-400">
-                          Priority: Ascending
                         </span>
                       </div>
                     </td>
