@@ -498,7 +498,6 @@ The application validates both frontend and backend.
 
 - JWT authentication is used.
 - Only one predefined user exists.
-- Users can only manage their own tasks.
 - Passwords are stored using bcrypt hashing.
 - Dates use the `YYYY-MM-DD` format.
 - MySQL is used as the database.
@@ -509,30 +508,14 @@ The application validates both frontend and backend.
 
 - User Registration is not implemented.
 - Forgot Password functionality is not available.
-- Pagination is not implemented.
-- Refresh Token authentication is not implemented.
-- Unit Tests are not included.
-- Docker support is not included.
 
 ---
 
-# Future Improvements
 
-- Pagination
-- Dark Mode
-- Toast Notifications
-- Docker Support
-- Unit Testing
-- Refresh Token Authentication
-- Cloud Deployment (Render/Vercel)
 
 ---
 
-# Default Login Credentials
 
-| Email | Password |
-|--------|----------|
-| admin@test.com | 123456 |
 
 ---
 
